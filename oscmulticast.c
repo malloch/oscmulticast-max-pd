@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include "lo/lo.h"
 
-#define INTERVAL 100
+#define INTERVAL 1
 
 // *********************************************************
 // -(object struct)-----------------------------------------
@@ -168,7 +168,11 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
 // -(poll libmapper)----------------------------------------
 void oscmulticast_poll(t_oscmulticast *x)
 {
-    lo_server_recv_noblock(x->om_server, 0);
+    int count = 0;
+    
+    while (count < 10 && lo_server_recv_noblock(x->om_server, 0)) {
+        count++;
+    }
 	clock_delay(x->om_clock, INTERVAL);  // Set clock to go off after delay
 }
 
