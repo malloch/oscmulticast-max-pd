@@ -185,7 +185,7 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
     int i;
     t_atom my_list[argc + 1];
     
-    atom_setsym(my_list, gensym(path));
+    atom_setsym(my_list, gensym((char *)path));
     
     for (i=0; i<argc; i++)
     {

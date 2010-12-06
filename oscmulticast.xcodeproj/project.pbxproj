@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		709F055A1222E110000230B8 /* liblo.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 709F05591222E110000230B8 /* liblo.dylib */; };
 		70E562F3129ECB0600F2AB2E /* oscmulticast.c in Sources */ = {isa = PBXBuildFile; fileRef = 70E562F2129ECB0600F2AB2E /* oscmulticast.c */; };
 		70EC55C91222DF7400EE4B15 /* MaxAPI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70EC55C81222DF7400EE4B15 /* MaxAPI.framework */; };
 		8D5B49A804867FD3000E48DA /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8D5B49A704867FD3000E48DA /* InfoPlist.strings */; };
@@ -15,7 +14,6 @@
 
 /* Begin PBXFileReference section */
 		089C167EFE841241C02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		709F05591222E110000230B8 /* liblo.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = liblo.dylib; path = usr/local/lib/liblo.dylib; sourceTree = SDKROOT; };
 		70E5623D129EB7B500F2AB2E /* oscmulticast.mxo */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = oscmulticast.mxo; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E562F2129ECB0600F2AB2E /* oscmulticast.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = oscmulticast.c; sourceTree = "<group>"; };
 		70EC55C81222DF7400EE4B15 /* MaxAPI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MaxAPI.framework; path = "/Library/Application Support/c74support/max-includes/MaxAPI.framework"; sourceTree = "<absolute>"; };
@@ -28,7 +26,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				70EC55C91222DF7400EE4B15 /* MaxAPI.framework in Frameworks */,
-				709F055A1222E110000230B8 /* liblo.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -50,7 +47,6 @@
 			isa = PBXGroup;
 			children = (
 				70EC55C81222DF7400EE4B15 /* MaxAPI.framework */,
-				709F05591222E110000230B8 /* liblo.dylib */,
 			);
 			name = "External Frameworks and Libraries";
 			sourceTree = "<group>";
@@ -190,17 +186,20 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = NO;
 				GENERATE_PKGINFO_FILE = YES;
 				HEADER_SEARCH_PATHS = (
-					/opt/local/include,
 					/Developer/Headers/FlatCarbon,
 					"\"/Library/Application Support/c74support/max-includes\"",
+					"\"$(SRCROOT)/../../../liblo-0.26\"",
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "";
 				ONLY_ACTIVE_ARCH = NO;
-				OTHER_LDFLAGS = "-lmx";
+				OTHER_LDFLAGS = (
+					/usr/local/lib/liblo.a,
+					"-lmx",
+				);
 				PREBINDING = YES;
 				PRODUCT_NAME = oscmulticast;
-				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.4u.sdk";
+				SDKROOT = macosx10.5;
 				SKIP_INSTALL = NO;
 				WARNING_CFLAGS = (
 					"-Wmost",
