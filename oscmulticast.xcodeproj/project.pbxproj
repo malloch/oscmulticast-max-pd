@@ -7,16 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		704521CA12AF0C3700D0A7C9 /* m_pd.h in Headers */ = {isa = PBXBuildFile; fileRef = 704521C912AF0C3700D0A7C9 /* m_pd.h */; };
 		70E562F3129ECB0600F2AB2E /* oscmulticast.c in Sources */ = {isa = PBXBuildFile; fileRef = 70E562F2129ECB0600F2AB2E /* oscmulticast.c */; };
-		70EC55C91222DF7400EE4B15 /* MaxAPI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70EC55C81222DF7400EE4B15 /* MaxAPI.framework */; };
 		8D5B49A804867FD3000E48DA /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8D5B49A704867FD3000E48DA /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		089C167EFE841241C02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		70E5623D129EB7B500F2AB2E /* oscmulticast.mxo */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = oscmulticast.mxo; sourceTree = BUILT_PRODUCTS_DIR; };
+		704521C912AF0C3700D0A7C9 /* m_pd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = m_pd.h; path = ../../../max/m_pd.h; sourceTree = SOURCE_ROOT; };
+		70E5623D129EB7B500F2AB2E /* oscmulticast.pd_darwin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = oscmulticast.pd_darwin; path = oscmulticast.; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E562F2129ECB0600F2AB2E /* oscmulticast.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = oscmulticast.c; sourceTree = "<group>"; };
-		70EC55C81222DF7400EE4B15 /* MaxAPI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MaxAPI.framework; path = "/Library/Application Support/c74support/max-includes/MaxAPI.framework"; sourceTree = "<absolute>"; };
 		8D576317048677EA00EA77CD /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -25,7 +25,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70EC55C91222DF7400EE4B15 /* MaxAPI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,7 +45,6 @@
 		089C1671FE841209C02AAC07 /* External Frameworks and Libraries */ = {
 			isa = PBXGroup;
 			children = (
-				70EC55C81222DF7400EE4B15 /* MaxAPI.framework */,
 			);
 			name = "External Frameworks and Libraries";
 			sourceTree = "<group>";
@@ -64,6 +62,7 @@
 			isa = PBXGroup;
 			children = (
 				70E562F2129ECB0600F2AB2E /* oscmulticast.c */,
+				704521C912AF0C3700D0A7C9 /* m_pd.h */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -71,7 +70,7 @@
 		19C28FB6FE9D52B211CA2CBB /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				70E5623D129EB7B500F2AB2E /* oscmulticast.mxo */,
+				70E5623D129EB7B500F2AB2E /* oscmulticast.pd_darwin */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,6 +82,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				704521CA12AF0C3700D0A7C9 /* m_pd.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -105,7 +105,7 @@
 			name = oscmulticast;
 			productInstallPath = "$(HOME)/Library/Bundles";
 			productName = maxadmin;
-			productReference = 70E5623D129EB7B500F2AB2E /* oscmulticast.mxo */;
+			productReference = 70E5623D129EB7B500F2AB2E /* oscmulticast.pd_darwin */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -166,12 +166,12 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		1DEB911B08733D790010E9CD /* Development */ = {
+		1DEB911B08733D790010E9CD /* maxmsp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH)";
-				COPY_PHASE_STRIP = NO;
+				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(LOCAL_LIBRARY_DIR)/Application Support/c74support/max-includes\"",
@@ -180,7 +180,7 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G4;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREFIX_HEADER = "/Applications/MaxSDK-5.1.1/c74support/max-includes/macho-prefix.pch";
 				GCC_VERSION = 4.0;
 				GCC_WARN_ABOUT_RETURN_TYPE = NO;
@@ -194,6 +194,8 @@
 				INSTALL_PATH = "";
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
+					"-framework",
+					MaxAPI,
 					/usr/local/lib/liblo.a,
 					"-lmx",
 				);
@@ -208,26 +210,37 @@
 				);
 				WRAPPER_EXTENSION = mxo;
 			};
-			name = Development;
+			name = maxmsp;
 		};
-		1DEB911C08733D790010E9CD /* Deployment */ = {
+		1DEB911C08733D790010E9CD /* puredata */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				EXECUTABLE_EXTENSION = pd_darwin;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(LOCAL_LIBRARY_DIR)/Application Support/c74support/max-includes\"",
 				);
 				GCC_MODEL_TUNING = G5;
+				GCC_VERSION = 4.0;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../liblo-0.26\"";
 				INFOPLIST_FILE = Info.plist;
-				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				INSTALL_PATH = "";
+				MACH_O_TYPE = mh_dylib;
+				OTHER_LDFLAGS = (
+					/usr/local/lib/liblo.a,
+					"-undefined",
+					dynamic_lookup,
+				);
 				PRODUCT_NAME = oscmulticast;
-				WRAPPER_EXTENSION = bundle;
+				SDKROOT = macosx10.5;
+				SKIP_INSTALL = NO;
+				WRAPPER_EXTENSION = "";
 			};
-			name = Deployment;
+			name = puredata;
 		};
-		1DEB911F08733D790010E9CD /* Development */ = {
+		1DEB911F08733D790010E9CD /* maxmsp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH)";
@@ -241,9 +254,9 @@
 				PREBINDING = YES;
 				SDKROOT = "";
 			};
-			name = Development;
+			name = maxmsp;
 		};
-		1DEB912008733D790010E9CD /* Deployment */ = {
+		1DEB912008733D790010E9CD /* puredata */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH)";
@@ -253,7 +266,7 @@
 				PREBINDING = YES;
 				SDKROOT = "";
 			};
-			name = Deployment;
+			name = puredata;
 		};
 /* End XCBuildConfiguration section */
 
@@ -261,20 +274,20 @@
 		1DEB911A08733D790010E9CD /* Build configuration list for PBXNativeTarget "oscmulticast" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				1DEB911B08733D790010E9CD /* Development */,
-				1DEB911C08733D790010E9CD /* Deployment */,
+				1DEB911B08733D790010E9CD /* maxmsp */,
+				1DEB911C08733D790010E9CD /* puredata */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Development;
+			defaultConfigurationName = maxmsp;
 		};
 		1DEB911E08733D790010E9CD /* Build configuration list for PBXProject "oscmulticast" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				1DEB911F08733D790010E9CD /* Development */,
-				1DEB912008733D790010E9CD /* Deployment */,
+				1DEB911F08733D790010E9CD /* maxmsp */,
+				1DEB912008733D790010E9CD /* puredata */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Development;
+			defaultConfigurationName = maxmsp;
 		};
 /* End XCConfigurationList section */
 	};
