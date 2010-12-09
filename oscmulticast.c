@@ -6,9 +6,9 @@
 // LGPL
 //
 
-#ifndef PD
-#define MAXMSP
-#endif
+//#ifndef PD
+//#define MAXMSP
+//#endif
 
 // *********************************************************
 // -(Includes)----------------------------------------------
@@ -236,8 +236,9 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
                     int argc, void *data, void *user_data)
 {
     t_oscmulticast *x = (t_oscmulticast *)user_data;
-    int i;
+    int i, j;
     t_atom my_list[argc + 1];
+    char my_string[2];
     
 #ifdef MAXMSP
     atom_setsym(my_list, gensym((char *)path));
@@ -245,50 +246,60 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
 	SETSYMBOL(my_list, gensym((char *)path));
 #endif
     
+    j=1;
+    
     for (i=0; i<argc; i++)
     {
         switch (types[i])
         {
             case 'i':
 #ifdef MAXMSP
-                atom_setlong(my_list+i+1, (long)argv[i]->i);
+                atom_setlong(my_list + j++, (long)argv[i]->i);
 #else
-				SETFLOAT(my_list+i+1, (float)argv[i]->i);
+				SETFLOAT(my_list + j++, (float)argv[i]->i);
 #endif
                 break;
             case 'h':
 #ifdef MAXMSP
-                atom_setlong(my_list+i+1, (long)argv[i]->h);
+                atom_setlong(my_list + j++, (long)argv[i]->h);
 #else
-				SETFLOAT(my_list+i+1, (float)argv[i]->h);
+				SETFLOAT(my_list + j++, (float)argv[i]->h);
 #endif
                 break;
             case 'f':
 #ifdef MAXMSP
-                atom_setfloat(my_list+i+1, argv[i]->f);
+                atom_setfloat(my_list + j++, argv[i]->f);
 #else
-				SETFLOAT(my_list+i+1, argv[i]->f);
+				SETFLOAT(my_list + j++, argv[i]->f);
 #endif
                 break;
             case 'd':
 #ifdef MAXMSP
-                atom_setfloat(my_list+i+1, (float)argv[i]->d);
+                atom_setfloat(my_list + j++, (float)argv[i]->d);
 #else
-				SETFLOAT(my_list+i+1, (float)argv[i]->d);
+				SETFLOAT(my_list + j++, (float)argv[i]->d);
 #endif
                 break;
             case 's':
 #ifdef MAXMSP
-                atom_setsym(my_list+i+1, gensym(&argv[i]->s));
+                atom_setsym(my_list + j++, gensym(&argv[i]->s));
 #else
-				SETSYMBOL(my_list+i+1, gensym(&argv[i]->s));
+				SETSYMBOL(my_list + j++, gensym(&argv[i]->s));
 #endif
                 break;
             case 'S':
 #ifdef MAXMSP
-                atom_setsym(my_list+i+1, gensym(&argv[i]->s));
+                atom_setsym(my_list + j++, gensym(&argv[i]->s));
 #else
-				SETSYMBOL(my_list+i+1, gensym(&argv[i]->s));
+				SETSYMBOL(my_list + j++, gensym(&argv[i]->s));
+#endif
+                break;
+            case 'c':
+                snprintf(my_string, 2, "%c", argv[i]->c);
+#ifdef MAXMSP
+                atom_setsym(my_list + j++, gensym(my_string));
+#else
+				SETSYMBOL(my_list + j++, gensym(my_string));
 #endif
                 break;
             case 't':
@@ -297,6 +308,6 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
         }
     }
     
-    outlet_list(x->om_outlet, 0L, argc + 1, my_list);
+    outlet_list(x->om_outlet, 0L, j, my_list);
     return 0;
 }
