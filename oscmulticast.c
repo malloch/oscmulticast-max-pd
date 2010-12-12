@@ -6,9 +6,9 @@
 // LGPL
 //
 
-//#ifndef PD
-//#define MAXMSP
-//#endif
+#ifndef PD
+#define MAXMSP
+#endif
 
 // *********************************************************
 // -(Includes)----------------------------------------------
@@ -25,6 +25,7 @@
 #include "lo/lo.h"
 
 #define INTERVAL 1
+#define MAXSIZE 256
 
 // *********************************************************
 // -(object struct)-----------------------------------------
@@ -35,6 +36,7 @@ typedef struct _oscmulticast
     lo_server om_server;
     lo_address om_address;
     void *om_clock;          // pointer to clock object
+	t_atom buffer[MAXSIZE];
 } t_oscmulticast;
 
 // *********************************************************
@@ -187,7 +189,7 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
 {
     lo_message m = lo_message_new();
     if (!m) {
-        printf("lo_message_new() error\n");
+        post("lo_message_new() error");
         return;
     }
     
@@ -237,16 +239,9 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
 {
     t_oscmulticast *x = (t_oscmulticast *)user_data;
     int i, j;
-    t_atom my_list[argc + 1];
     char my_string[2];
     
-#ifdef MAXMSP
-    atom_setsym(my_list, gensym((char *)path));
-#else
-	SETSYMBOL(my_list, gensym((char *)path));
-#endif
-    
-    j=1;
+    j=0;
     
     for (i=0; i<argc; i++)
     {
@@ -254,60 +249,66 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
         {
             case 'i':
 #ifdef MAXMSP
-                atom_setlong(my_list + j++, (long)argv[i]->i);
+                atom_setlong(x->buffer+j, (long)argv[i]->i);
 #else
-				SETFLOAT(my_list + j++, (float)argv[i]->i);
+				SETFLOAT(x->buffer+j, (float)argv[i]->i);
 #endif
+				j++;
                 break;
             case 'h':
 #ifdef MAXMSP
-                atom_setlong(my_list + j++, (long)argv[i]->h);
+                atom_setlong(x->buffer+j, (long)argv[i]->h);
 #else
-				SETFLOAT(my_list + j++, (float)argv[i]->h);
+				SETFLOAT(x->buffer+j, (float)argv[i]->h);
 #endif
+				j++;
                 break;
             case 'f':
 #ifdef MAXMSP
-                atom_setfloat(my_list + j++, argv[i]->f);
+                atom_setfloat(x->buffer+j, argv[i]->f);
 #else
-				SETFLOAT(my_list + j++, argv[i]->f);
+				SETFLOAT(x->buffer+j, argv[i]->f);
 #endif
+				j++;
                 break;
             case 'd':
 #ifdef MAXMSP
-                atom_setfloat(my_list + j++, (float)argv[i]->d);
+                atom_setfloat(x->buffer+j, (float)argv[i]->d);
 #else
-				SETFLOAT(my_list + j++, (float)argv[i]->d);
+				SETFLOAT(x->buffer+j, (float)argv[i]->d);
 #endif
+				j++;
                 break;
             case 's':
 #ifdef MAXMSP
-                atom_setsym(my_list + j++, gensym(&argv[i]->s));
+                atom_setsym(x->buffer+j, gensym(&argv[i]->s));
 #else
-				SETSYMBOL(my_list + j++, gensym(&argv[i]->s));
+				SETSYMBOL(x->buffer+j, gensym(&argv[i]->s));
 #endif
+				j++;
                 break;
             case 'S':
 #ifdef MAXMSP
-                atom_setsym(my_list + j++, gensym(&argv[i]->s));
+                atom_setsym(x->buffer+j, gensym(&argv[i]->s));
 #else
-				SETSYMBOL(my_list + j++, gensym(&argv[i]->s));
+				SETSYMBOL(x->buffer+j, gensym(&argv[i]->s));
 #endif
+				j++;
                 break;
             case 'c':
                 snprintf(my_string, 2, "%c", argv[i]->c);
 #ifdef MAXMSP
-                atom_setsym(my_list + j++, gensym(my_string));
+                atom_setsym(x->buffer+j, gensym(my_string));
 #else
-				SETSYMBOL(my_list + j++, gensym(my_string));
+				SETSYMBOL(x->buffer+j, gensym(my_string));
 #endif
+				j++;
                 break;
             case 't':
                 //output timetag from a second outlet?
                 break;
         }
     }
-    
-    outlet_list(x->om_outlet, 0L, j, my_list);
+    outlet_anything(x->om_outlet, gensym((char *)path), j, x->buffer);
     return 0;
 }
