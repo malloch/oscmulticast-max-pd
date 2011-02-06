@@ -243,6 +243,16 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
     
     j=0;
     
+    if (!x->buffer) {
+        post("Error receiving message!");
+        return 0;
+    }
+    
+    if (argc > MAXSIZE) {
+        post("Truncating received message to 256 elements!");
+        argc = MAXSIZE;
+    }
+    
     for (i=0; i<argc; i++)
     {
         switch (types[i])
