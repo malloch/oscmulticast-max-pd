@@ -14,8 +14,8 @@
 
 /* Begin PBXFileReference section */
 		089C167EFE841241C02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		704521C912AF0C3700D0A7C9 /* m_pd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = m_pd.h; path = ../../../max/m_pd.h; sourceTree = SOURCE_ROOT; };
-		70E5623D129EB7B500F2AB2E /* oscmulticast.pd_darwin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = oscmulticast.pd_darwin; path = oscmulticast.; sourceTree = BUILT_PRODUCTS_DIR; };
+		704521C912AF0C3700D0A7C9 /* m_pd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = m_pd.h; sourceTree = "<group>"; };
+		70E5623D129EB7B500F2AB2E /* oscmulticast. */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = oscmulticast.; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E562F2129ECB0600F2AB2E /* oscmulticast.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = oscmulticast.c; sourceTree = "<group>"; };
 		8D576317048677EA00EA77CD /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -70,7 +70,7 @@
 		19C28FB6FE9D52B211CA2CBB /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				70E5623D129EB7B500F2AB2E /* oscmulticast.pd_darwin */,
+				70E5623D129EB7B500F2AB2E /* oscmulticast. */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -105,7 +105,7 @@
 			name = oscmulticast;
 			productInstallPath = "$(HOME)/Library/Bundles";
 			productName = maxadmin;
-			productReference = 70E5623D129EB7B500F2AB2E /* oscmulticast.pd_darwin */;
+			productReference = 70E5623D129EB7B500F2AB2E /* oscmulticast. */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -188,7 +188,7 @@
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					"\"/Library/Application Support/c74support/max-includes\"",
-					"\"$(SRCROOT)/../../../liblo-0.26\"",
+					"\"$(SRCROOT)/../liblo-0.26\"",
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "";
@@ -224,7 +224,7 @@
 				);
 				GCC_MODEL_TUNING = G5;
 				GCC_VERSION = 4.0;
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../liblo-0.26\"";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../liblo-0.26\"";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "";
 				MACH_O_TYPE = mh_dylib;
