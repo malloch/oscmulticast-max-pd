@@ -6,10 +6,6 @@
 // LGPL
 //
 
-#ifndef PD
-#define MAXMSP
-#endif
-
 // *********************************************************
 // -(Includes)----------------------------------------------
 
@@ -20,8 +16,10 @@
 	#include "jpatcher_api.h"
 #else
 	#include "m_pd.h"
+    #define A_SYM A_SYMBOL
 #endif
 #include <stdio.h>
+#include <string.h>
 #include "lo/lo.h"
 
 #define INTERVAL 1
@@ -41,19 +39,25 @@ typedef struct _oscmulticast
 
 // *********************************************************
 // -(function prototypes)-----------------------------------
-void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv);
-void oscmulticast_free(t_oscmulticast *x);
-void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv);
-void oscmulticast_poll(t_oscmulticast *x);
-int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
+static void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv);
+static void oscmulticast_free(t_oscmulticast *x);
+static void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv);
+static void oscmulticast_poll(t_oscmulticast *x);
+static int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
                          int argc, void *data, void *user_data);
 #ifdef MAXMSP
-	void oscmulticast_assist(t_oscmulticast *x, void *b, long m, long a, char *s);
+	static void oscmulticast_assist(t_oscmulticast *x, void *b, long m, long a, char *s);
 #endif
+
+static const char *maxpd_atom_get_string(t_atom *a);
+static void maxpd_atom_set_string(t_atom *a, const char *string);
+static void maxpd_atom_set_int(t_atom *a, int i);
+static double maxpd_atom_get_float(t_atom *a);
+static void maxpd_atom_set_float(t_atom *a, float d);
 
 // *********************************************************
 // -(global class pointer variable)-------------------------
-void *oscmulticast_class;
+static void *oscmulticast_class;
 
 // *********************************************************
 // -(main)--------------------------------------------------
@@ -87,69 +91,58 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 {
 	t_oscmulticast *x = NULL;
     int i;
-    char *group = NULL, port[10], address[64];
-    
-    if (argc < 4) {
-        post("Not enough arguments!\n");
-        return NULL;
-    }
-#ifdef MAXMSP
-    for (i = 0; i < argc; i++) {
-        if(strcmp(atom_getsym(argv+i)->s_name, "@group") == 0) {
-            if ((argv+i+1)->a_type == A_SYM) {
-                group = strdup(atom_getsym(argv+i+1)->s_name);
-                i++;
-            }
-        }
-        else if (strcmp(atom_getsym(argv+i)->s_name, "@port") == 0) {
-            if ((argv+i+1)->a_type == A_LONG) {
-                snprintf(port, 10, "%i", (int)atom_getlong(argv+i+1));
-                i++;
-            }
-        }
-    }
-	if (x = object_alloc(oscmulticast_class))
-        x->om_outlet = outlet_new((t_object *)x, 0);
-	else
-		return 0;
-        
-#else
-	for (i = 0; i < argc; i++) {
-        if(strcmp((argv+i)->a_w.w_symbol->s_name, "@group") == 0) {
-            if ((argv+i+1)->a_type == A_SYMBOL) {
-                group = strdup((argv+i+1)->a_w.w_symbol->s_name);
-                i++;
-            }
-        }
-        else if (strcmp((argv+i)->a_w.w_symbol->s_name, "@port") == 0) {
-            if ((argv+i+1)->a_type == A_FLOAT) {
-                snprintf(port, 10, "%i", (int)atom_getfloat(argv+i+1));
-                i++;
-            }
-        }
-    }    
-    if (x = (t_oscmulticast *) pd_new(oscmulticast_class))
-        x->om_outlet = outlet_new(&x->ob, 0);
-	else
-		return 0;
-#endif
-        
-	if (&group && port) {
-		snprintf(address, 64, "osc.udp://%s:%s", group, port);
-		x->om_address = lo_address_new_from_url(address);
-		lo_address_set_ttl(x->om_address, 1);
-		
-		x->om_server = lo_server_new_multicast(group, port, 0);
-		lo_server_add_method(x->om_server, NULL, NULL, oscmulticast_handler, x);
-	}
-	
-#ifdef MAXMSP
-	x->om_clock = clock_new(x, (method)oscmulticast_poll);	// Create the timing clock
-#else
-	x->om_clock = clock_new(x, (t_method)oscmulticast_poll);
-#endif
-	clock_delay(x->om_clock, INTERVAL);  // Set clock to go off after delay
+    const char *group = NULL;
+    char port[0], address[64];
 
+#ifdef MAXMSP
+    if (x = object_alloc(oscmulticast_class)) {
+        x->om_outlet = outlet_new((t_object *)x, 0);
+#else
+    if (x = (t_oscmulticast *) pd_new(oscmulticast_class)) {
+        x->om_outlet = outlet_new(&x->ob, 0);
+#endif
+
+        if (argc < 4) {
+            post("Not enough arguments!\n");
+            return NULL;
+        }
+        for (i = 0; i < argc; i++) {
+            if(strcmp(maxpd_atom_get_string(argv+i), "@group") == 0) {
+                if ((argv+i+1)->a_type == A_SYM) {
+                    group = maxpd_atom_get_string(argv+i+1);
+                    i++;
+                }
+            }
+            else if (strcmp(maxpd_atom_get_string(argv+i), "@port") == 0) {
+                if ((argv+i+1)->a_type == A_FLOAT) {
+                    snprintf(port, 10, "%i", (int)maxpd_atom_get_float(argv+i+1));
+                    i++;
+                }
+#ifdef MAXMSP
+                else if ((argv+i+1)->a_type == A_LONG) {
+                    snprintf(port, 10, "%i", (int)atom_getlong(argv+i+1));
+                    i++;
+                }
+#endif
+            }
+        }
+
+        if (&group && port) {
+            snprintf(address, 64, "osc.udp://%s:%s", group, port);
+            x->om_address = lo_address_new_from_url(address);
+            lo_address_set_ttl(x->om_address, 1);
+            
+            x->om_server = lo_server_new_multicast(group, port, 0);
+            lo_server_add_method(x->om_server, NULL, NULL, oscmulticast_handler, x);
+        }
+        
+#ifdef MAXMSP
+        x->om_clock = clock_new(x, (method)oscmulticast_poll);	// Create the timing clock
+#else
+        x->om_clock = clock_new(x, (t_method)oscmulticast_poll);
+#endif
+        clock_delay(x->om_clock, INTERVAL);  // Set clock to go off after delay
+    }
 	return (x);
 }
 
@@ -159,7 +152,7 @@ void oscmulticast_free(t_oscmulticast *x)
 {
     if (x->om_clock) {
         clock_unset(x->om_clock);	// Remove clock routine from the scheduler
-        clock_free(x->om_clock);		// Frees memeory used by clock
+        clock_free(x->om_clock);		// Frees memory used by clock
     }
     if (x->om_server) {
         lo_server_free(x->om_server);
@@ -258,60 +251,35 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
         switch (types[i])
         {
             case 'i':
-#ifdef MAXMSP
-                atom_setlong(x->buffer+j, (long)argv[i]->i);
-#else
-				SETFLOAT(x->buffer+j, (float)argv[i]->i);
-#endif
+                maxpd_atom_set_int(x->buffer+j, argv[i]->i);
 				j++;
                 break;
             case 'h':
-#ifdef MAXMSP
-                atom_setlong(x->buffer+j, (long)argv[i]->h);
-#else
-				SETFLOAT(x->buffer+j, (float)argv[i]->h);
-#endif
+                maxpd_atom_set_int(x->buffer+j, argv[i]->h);
 				j++;
                 break;
             case 'f':
-#ifdef MAXMSP
-                atom_setfloat(x->buffer+j, argv[i]->f);
-#else
-				SETFLOAT(x->buffer+j, argv[i]->f);
-#endif
+                maxpd_atom_set_float(x->buffer+j, argv[i]->f);
 				j++;
                 break;
             case 'd':
-#ifdef MAXMSP
-                atom_setfloat(x->buffer+j, (float)argv[i]->d);
-#else
-				SETFLOAT(x->buffer+j, (float)argv[i]->d);
-#endif
+                maxpd_atom_set_float(x->buffer+j, (float)argv[i]->d);
 				j++;
                 break;
             case 's':
-#ifdef MAXMSP
-                atom_setsym(x->buffer+j, gensym(&argv[i]->s));
-#else
-				SETSYMBOL(x->buffer+j, gensym(&argv[i]->s));
-#endif
+                maxpd_atom_set_string(x->buffer+j,
+                                      (const char *)gensym(&argv[i]->s));
 				j++;
                 break;
             case 'S':
-#ifdef MAXMSP
-                atom_setsym(x->buffer+j, gensym(&argv[i]->s));
-#else
-				SETSYMBOL(x->buffer+j, gensym(&argv[i]->s));
-#endif
+                maxpd_atom_set_string(x->buffer+j,
+                                      (const char *)gensym(&argv[i]->s));
 				j++;
                 break;
             case 'c':
                 snprintf(my_string, 2, "%c", argv[i]->c);
-#ifdef MAXMSP
-                atom_setsym(x->buffer+j, gensym(my_string));
-#else
-				SETSYMBOL(x->buffer+j, gensym(my_string));
-#endif
+                maxpd_atom_set_string(x->buffer+j,
+                                      (const char *)gensym(my_string));
 				j++;
                 break;
             case 't':
@@ -321,4 +289,49 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
     }
     outlet_anything(x->om_outlet, gensym((char *)path), j, x->buffer);
     return 0;
+}
+
+// *********************************************************
+// some helper functions for abtracting differences
+// between maxmsp and puredata 
+
+const char *maxpd_atom_get_string(t_atom *a)
+{
+#ifdef MAXMSP
+    return atom_getsym(a)->s_name;
+#else
+    return (a)->a_w.w_symbol->s_name;
+#endif
+}
+
+void maxpd_atom_set_string(t_atom *a, const char *string)
+{
+#ifdef MAXMSP
+    atom_setsym(a, gensym((char *)string));
+#else
+    SETSYMBOL(a, gensym(string));
+#endif
+}
+
+void maxpd_atom_set_int(t_atom *a, int i)
+{
+#ifdef MAXMSP
+    atom_setlong(a, (long)i);
+#else
+    SETFLOAT(a, (double)i);
+#endif
+}
+
+double maxpd_atom_get_float(t_atom *a)
+{
+    return (double)atom_getfloat(a);
+}
+
+void maxpd_atom_set_float(t_atom *a, float d)
+{
+#ifdef MAXMSP
+    atom_setfloat(a, d);
+#else
+    SETFLOAT(a, d);
+#endif
 }
