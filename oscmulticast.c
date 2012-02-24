@@ -33,10 +33,13 @@
 typedef struct _oscmulticast 
 {
 	t_object ob;
-    void *om_outlet;
-    lo_server om_server;
-    lo_address om_address;
-    void *om_clock;          // pointer to clock object
+    void *outlet1;
+    char *iface;
+    char *group;
+    char port[10];
+    lo_server server;
+    lo_address address;
+    void *clock;          // pointer to clock object
 	t_atom buffer[MAXSIZE];
 } t_oscmulticast;
 
@@ -44,6 +47,7 @@ typedef struct _oscmulticast
 // -(function prototypes)-----------------------------------
 static void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv);
 static void oscmulticast_free(t_oscmulticast *x);
+static void oscmulticast_interface(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv);
 static void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv);
 static void oscmulticast_poll(t_oscmulticast *x);
 static int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
@@ -57,7 +61,7 @@ static void maxpd_atom_set_string(t_atom *a, const char *string);
 static void maxpd_atom_set_int(t_atom *a, int i);
 static double maxpd_atom_get_float(t_atom *a);
 static void maxpd_atom_set_float(t_atom *a, float d);
-static int get_interface_addr(const char* pref,
+static int get_interface_addr(t_oscmulticast *x, const char* pref,
                               struct in_addr* addr, char **iface);
 
 // *********************************************************
@@ -72,8 +76,9 @@ static void *oscmulticast_class;
 		t_class *c;
 		c = class_new("oscmulticast", (method)oscmulticast_new, (method)oscmulticast_free, 
 					  (long)sizeof(t_oscmulticast), 0L, A_GIMME, 0);
-		class_addmethod(c, (method)oscmulticast_assist,         "assist",   A_CANT,     0);
-		class_addmethod(c, (method)oscmulticast_anything,       "anything", A_GIMME,    0);
+		class_addmethod(c, (method)oscmulticast_assist,    "assist",    A_CANT,  0);
+        class_addmethod(c, (method)oscmulticast_interface, "interface", A_GIMME, 0);
+		class_addmethod(c, (method)oscmulticast_anything,  "anything",  A_GIMME, 0);
 		class_register(CLASS_BOX, c); /* CLASS_NOBOX */
 		oscmulticast_class = c;
 		return 0;
@@ -84,6 +89,7 @@ static void *oscmulticast_class;
 		t_class *c;
 		c = class_new(gensym("oscmulticast"), (t_newmethod)oscmulticast_new, (t_method)oscmulticast_free, 
 					  (long)sizeof(t_oscmulticast), 0L, A_GIMME, 0);
+        class_addmethod(c, (t_method_)oscmulticast_interface, gensym("interface"), A_GIMME, 0);
 		class_addanything(c, (t_method)oscmulticast_anything);
 		oscmulticast_class = c;
 		return 0;
@@ -95,20 +101,21 @@ static void *oscmulticast_class;
 void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 {
 	t_oscmulticast *x = NULL;
-    int i;
-    const char *group = NULL;
-    const char *iface = NULL;
-    char port[0], address[64];
+    int i, got_port = 0;
+    char address[64];
     struct in_addr iface_ip;
     char *iface_name = NULL;
 
 #ifdef MAXMSP
     if (x = object_alloc(oscmulticast_class)) {
-        x->om_outlet = outlet_new((t_object *)x, 0);
+        x->outlet1 = outlet_new((t_object *)x, 0);
 #else
     if (x = (t_oscmulticast *) pd_new(oscmulticast_class)) {
-        x->om_outlet = outlet_new(&x->ob, 0);
+        x->outlet1 = outlet_new(&x->ob, gensym("list"));
 #endif
+
+        x->group = NULL;
+        x->iface = NULL;
 
         if (argc < 4) {
             post("oscmulticast: not enough arguments!\n");
@@ -117,73 +124,75 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
         for (i = 0; i < argc; i++) {
             if(strcmp(maxpd_atom_get_string(argv+i), "@group") == 0) {
                 if ((argv+i+1)->a_type == A_SYM) {
-                    group = maxpd_atom_get_string(argv+i+1);
+                    x->group = strdup(maxpd_atom_get_string(argv+i+1));
                     i++;
                 }
             }
             else if (strcmp(maxpd_atom_get_string(argv+i), "@port") == 0) {
                 if ((argv+i+1)->a_type == A_FLOAT) {
-                    snprintf(port, 10, "%i", (int)maxpd_atom_get_float(argv+i+1));
+                    snprintf(x->port, 10, "%i", (int)maxpd_atom_get_float(argv+i+1));
+                    got_port = 1;
                     i++;
                 }
 #ifdef MAXMSP
                 else if ((argv+i+1)->a_type == A_LONG) {
-                    snprintf(port, 10, "%i", (int)atom_getlong(argv+i+1));
+                    snprintf(x->port, 10, "%i", (int)atom_getlong(argv+i+1));
+                    got_port = 1;
                     i++;
                 }
 #endif
             }
             else if(strcmp(maxpd_atom_get_string(argv+i), "@interface") == 0) {
                 if ((argv+i+1)->a_type == A_SYM) {
-                    iface = maxpd_atom_get_string(argv+i+1);
+                    x->iface = strdup(maxpd_atom_get_string(argv+i+1));
                     i++;
                 }
             }
         }
 
-        if (!group || !port) {
+        if (!x->group || !got_port) {
             post("oscmulticast: need to specify group and port!");
             return NULL;
         }
 
         /* Initialize interface information. */
-        if (get_interface_addr(iface, &iface_ip, &iface_name))
+        if (get_interface_addr(x, x->iface, &iface_ip, &iface_name))
             post("oscmulticast: no interface found.");
 
         /* Open address */
-        snprintf(address, 64, "osc.udp://%s:%s", group, port);
-        x->om_address = lo_address_new_from_url(address);
-        if (!x->om_address) {
+        snprintf(address, 64, "osc.udp://%s:%s", x->group, x->port);
+        x->address = lo_address_new_from_url(address);
+        if (!x->address) {
             post("oscmulticast: could not create lo_address.");
             return NULL;
         }
 
         /* Set TTL for packet to 1 -> local subnet */
-        lo_address_set_ttl(x->om_address, 1);
+        lo_address_set_ttl(x->address, 1);
 
         /* Specify the interface to use for multicasting */
-        if (iface) {
-            lo_address_set_iface(x->om_address, iface_name, 0);
-            x->om_server = lo_server_new_multicast_iface(group, port, iface_name, 0, 0);
+        if (x->iface) {
+            lo_address_set_iface(x->address, iface_name, 0);
+            x->server = lo_server_new_multicast_iface(x->group, x->port, iface_name, 0, 0);
         }
         else {
-            x->om_server = lo_server_new_multicast(group, port, 0);
+            x->server = lo_server_new_multicast(x->group, x->port, 0);
         }
 
-        if (!x->om_server) {
+        if (!x->server) {
             post("oscmulticast: could not create lo_server");
-            lo_address_free(x->om_address);
+            lo_address_free(x->address);
             return NULL;
         }
         post("oscmulticast: using interface %s", iface_name);
-        lo_server_add_method(x->om_server, NULL, NULL, oscmulticast_handler, x);
+        lo_server_add_method(x->server, NULL, NULL, oscmulticast_handler, x);
         
 #ifdef MAXMSP
-        x->om_clock = clock_new(x, (method)oscmulticast_poll);	// Create the timing clock
+        x->clock = clock_new(x, (method)oscmulticast_poll);	// Create the timing clock
 #else
-        x->om_clock = clock_new(x, (t_method)oscmulticast_poll);
+        x->clock = clock_new(x, (t_method)oscmulticast_poll);
 #endif
-        clock_delay(x->om_clock, INTERVAL);  // Set clock to go off after delay
+        clock_delay(x->clock, INTERVAL);  // Set clock to go off after delay
     }
 	return (x);
 }
@@ -192,15 +201,21 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 // -(free)--------------------------------------------------
 void oscmulticast_free(t_oscmulticast *x)
 {
-    if (x->om_clock) {
-        clock_unset(x->om_clock);	// Remove clock routine from the scheduler
-        clock_free(x->om_clock);		// Frees memory used by clock
+    if (x->clock) {
+        clock_unset(x->clock);	// Remove clock routine from the scheduler
+        clock_free(x->clock);		// Frees memory used by clock
     }
-    if (x->om_server) {
-        lo_server_free(x->om_server);
+    if (x->server) {
+        lo_server_free(x->server);
     }
-    if (x->om_address) {
-        lo_address_free(x->om_address);
+    if (x->address) {
+        lo_address_free(x->address);
+    }
+    if (x->iface) {
+        free(x->iface);
+    }
+    if (x->group) {
+        free(x->group);
     }
 }
 
@@ -217,6 +232,34 @@ void oscmulticast_assist(t_oscmulticast *x, void *b, long m, long a, char *s)
 	}
 }
 #endif
+
+// *********************************************************
+// -(interface)---------------------------------------------
+static void oscmulticast_interface(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv)
+{
+    struct in_addr iface_ip;
+    char *iface_name = NULL;
+
+    if (argc < 1)
+        return;
+
+    if (argv->a_type != A_SYM)
+        return;
+
+    if (get_interface_addr(x, maxpd_atom_get_string(argv), &iface_ip, &iface_name)) {
+        post("oscmulticast: no interface found.");
+        return;
+    }
+
+    lo_address_set_iface(x->address, iface_name, 0);
+
+    if (x->server)
+        lo_server_free(x->server);
+    x->server = lo_server_new_multicast_iface(x->group, x->port, iface_name, 0, 0);
+
+    post("oscmulticast: using interface %s", iface_name);
+    lo_server_add_method(x->server, NULL, NULL, oscmulticast_handler, x);
+}
 
 // *********************************************************
 // -(anything)----------------------------------------------
@@ -248,7 +291,7 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
     }
     //set timetag?
     
-    lo_send_message(x->om_address, s->s_name, m);
+    lo_send_message(x->address, s->s_name, m);
     lo_message_free(m);
 }
 
@@ -258,10 +301,10 @@ void oscmulticast_poll(t_oscmulticast *x)
 {
     int count = 0;
     
-    while (count < 10 && lo_server_recv_noblock(x->om_server, 0)) {
+    while (count < 10 && lo_server_recv_noblock(x->server, 0)) {
         count++;
     }
-	clock_delay(x->om_clock, INTERVAL);  // Set clock to go off after delay
+	clock_delay(x->clock, INTERVAL);  // Set clock to go off after delay
 }
 
 // *********************************************************
@@ -323,7 +366,7 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
                 break;
         }
     }
-    outlet_anything(x->om_outlet, gensym((char *)path), j, x->buffer);
+    outlet_anything(x->outlet1, gensym((char *)path), j, x->buffer);
     return 0;
 }
 
@@ -373,29 +416,31 @@ void maxpd_atom_set_float(t_atom *a, float d)
 }
 
 /*! Local function to get the IP address of a network interface. */
-static int get_interface_addr(const char* pref,
+static int get_interface_addr(t_oscmulticast *x, const char* pref,
                               struct in_addr* addr, char **iface)
 {
     struct in_addr zero;
     struct sockaddr_in *sa;
-    
+
     *(unsigned int *)&zero = inet_addr("0.0.0.0");
-        
+
     struct ifaddrs *ifaphead;
     struct ifaddrs *ifap;
     struct ifaddrs *iflo=0, *ifchosen=0;
-    
+
     if (getifaddrs(&ifaphead) != 0)
         return 1;
-    
+
     ifap = ifaphead;
+
+    // choose interface based on stated preference
     while (ifap) {
         sa = (struct sockaddr_in *) ifap->ifa_addr;
         if (!sa) {
             ifap = ifap->ifa_next;
             continue;
         }
-        
+
         // Note, we could also check for IFF_MULTICAST-- however this
         // is the data-sending port, not the admin bus port.
         
@@ -410,11 +455,11 @@ static int get_interface_addr(const char* pref,
         }
         ifap = ifap->ifa_next;
     }
-    
+
     // Default to loopback address in case user is working locally.
     if (!ifchosen)
         ifchosen = iflo;
-    
+
     if (ifchosen) {
         if (*iface) free(*iface);
         *iface = strdup(ifchosen->ifa_name);
@@ -423,8 +468,8 @@ static int get_interface_addr(const char* pref,
         freeifaddrs(ifaphead);
         return 0;
     }
-    
+
     freeifaddrs(ifaphead);
-    
+
     return 2;
 }
