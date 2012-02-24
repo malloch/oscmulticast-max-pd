@@ -1,9 +1,9 @@
 //
 // oscmulticast.c
-// a maxmsp external for passing multicast OSC
+// a maxmsp and puredata external for handling multicast OSC
 // http://www.idmil.org/software/mappingtools
 // Joseph Malloch, IDMIL 2010
-// LGPL
+// License: LGPL
 //
 
 // *********************************************************
@@ -198,13 +198,10 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
             case A_LONG:
                 lo_message_add_int32(m, (int)atom_getlong(argv + i));
                 break;
-            case A_SYM:
-                lo_message_add_string(m, (atom_getsym(argv + i)->s_name));
-                break;
-#else
-			case A_SYMBOL:
-				lo_message_add_string(m, (argv + i)->a_w.w_symbol->s_name);
 #endif
+            case A_SYM:
+                lo_message_add_string(m, maxpd_atom_get_string(argv + i));
+                break;
         }
     }
     //set timetag?
