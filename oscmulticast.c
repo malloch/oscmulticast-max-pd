@@ -264,19 +264,16 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
 				j++;
                 break;
             case 's':
-                maxpd_atom_set_string(x->buffer+j,
-                                      (const char *)gensym(&argv[i]->s));
+                maxpd_atom_set_string(x->buffer+j, (const char *)&argv[i]->s);
 				j++;
                 break;
             case 'S':
-                maxpd_atom_set_string(x->buffer+j,
-                                      (const char *)gensym(&argv[i]->s));
+                maxpd_atom_set_string(x->buffer+j, (const char *)&argv[i]->s);
 				j++;
                 break;
             case 'c':
                 snprintf(my_string, 2, "%c", argv[i]->c);
-                maxpd_atom_set_string(x->buffer+j,
-                                      (const char *)gensym(my_string));
+                maxpd_atom_set_string(x->buffer+j, (const char *)my_string);
 				j++;
                 break;
             case 't':
