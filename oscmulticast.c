@@ -127,7 +127,7 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
             }
         }
 
-        if (&group && port) {
+        if (group && port) {
             snprintf(address, 64, "osc.udp://%s:%s", group, port);
             x->om_address = lo_address_new_from_url(address);
             lo_address_set_ttl(x->om_address, 1);
