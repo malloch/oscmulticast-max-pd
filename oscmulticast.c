@@ -111,7 +111,7 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 #endif
 
         if (argc < 4) {
-            post("Not enough arguments!\n");
+            post("oscmulticast: not enough arguments!\n");
             return NULL;
         }
         for (i = 0; i < argc; i++) {
@@ -141,37 +141,42 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
             }
         }
 
-        if (group && port) {
-            /* Initialize interface information. */
-            if (get_interface_addr(iface, &iface_ip, &iface_name))
-                post("oscmulticast: no interface found.");
-
-            /* Open address */
-            snprintf(address, 64, "osc.udp://%s:%s", group, port);
-            x->om_address = lo_address_new_from_url(address);
-            if (!x->om_address) {
-                post("oscmulticast: could not create lo_address.");
-                return NULL;
-            }
-
-            /* Set TTL for packet to 1 -> local subnet */
-            lo_address_set_ttl(x->om_address, 1);
-
-            /* Specify the interface to use for multicasting */
-            if (iface) {
-                lo_address_set_iface(x->om_address, iface_name, 0);
-                x->om_server = lo_server_new_multicast_iface(group, port, iface_name, 0, 0);
-            }
-            else {
-                x->om_server = lo_server_new_multicast(group, port, 0);
-            }
-
-            if (!x->om_server) {
-                lo_address_free(x->om_address);
-                return NULL;
-            }
-            lo_server_add_method(x->om_server, NULL, NULL, oscmulticast_handler, x);
+        if (!group || !port) {
+            post("oscmulticast: need to specify group and port!");
+            return NULL;
         }
+
+        /* Initialize interface information. */
+        if (get_interface_addr(iface, &iface_ip, &iface_name))
+            post("oscmulticast: no interface found.");
+
+        /* Open address */
+        snprintf(address, 64, "osc.udp://%s:%s", group, port);
+        x->om_address = lo_address_new_from_url(address);
+        if (!x->om_address) {
+            post("oscmulticast: could not create lo_address.");
+            return NULL;
+        }
+
+        /* Set TTL for packet to 1 -> local subnet */
+        lo_address_set_ttl(x->om_address, 1);
+
+        /* Specify the interface to use for multicasting */
+        if (iface) {
+            lo_address_set_iface(x->om_address, iface_name, 0);
+            x->om_server = lo_server_new_multicast_iface(group, port, iface_name, 0, 0);
+        }
+        else {
+            x->om_server = lo_server_new_multicast(group, port, 0);
+        }
+
+        if (!x->om_server) {
+            post("oscmulticast: could not create lo_server")
+            lo_address_free(x->om_address);
+            return NULL;
+        }
+        post("oscmulticast: using interface %s", iface_name);
+        lo_server_add_method(x->om_server, NULL, NULL, oscmulticast_handler, x);
         
 #ifdef MAXMSP
         x->om_clock = clock_new(x, (method)oscmulticast_poll);	// Create the timing clock
