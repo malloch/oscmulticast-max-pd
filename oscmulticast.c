@@ -21,6 +21,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "lo/lo.h"
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 
 #define INTERVAL 1
 #define MAXSIZE 256
@@ -54,6 +57,8 @@ static void maxpd_atom_set_string(t_atom *a, const char *string);
 static void maxpd_atom_set_int(t_atom *a, int i);
 static double maxpd_atom_get_float(t_atom *a);
 static void maxpd_atom_set_float(t_atom *a, float d);
+static int get_interface_addr(const char* pref,
+                              struct in_addr* addr, char **iface);
 
 // *********************************************************
 // -(global class pointer variable)-------------------------
@@ -92,7 +97,10 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 	t_oscmulticast *x = NULL;
     int i;
     const char *group = NULL;
+    const char *iface = NULL;
     char port[0], address[64];
+    struct in_addr iface_ip;
+    char *iface_name = NULL;
 
 #ifdef MAXMSP
     if (x = object_alloc(oscmulticast_class)) {
@@ -125,14 +133,43 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
                 }
 #endif
             }
+            else if(strcmp(maxpd_atom_get_string(argv+i), "@interface") == 0) {
+                if ((argv+i+1)->a_type == A_SYM) {
+                    iface = maxpd_atom_get_string(argv+i+1);
+                    i++;
+                }
+            }
         }
 
-        if (&group && port) {
+        if (group && port) {
+            /* Initialize interface information. */
+            if (get_interface_addr(iface, &iface_ip, &iface_name))
+                post("oscmulticast: no interface found.");
+
+            /* Open address */
             snprintf(address, 64, "osc.udp://%s:%s", group, port);
             x->om_address = lo_address_new_from_url(address);
+            if (!x->om_address) {
+                post("oscmulticast: could not create lo_address.");
+                return NULL;
+            }
+
+            /* Set TTL for packet to 1 -> local subnet */
             lo_address_set_ttl(x->om_address, 1);
-            
-            x->om_server = lo_server_new_multicast(group, port, 0);
+
+            /* Specify the interface to use for multicasting */
+            if (iface) {
+                lo_address_set_iface(x->om_address, iface_name, 0);
+                x->om_server = lo_server_new_multicast_iface(group, port, iface_name, 0, 0);
+            }
+            else {
+                x->om_server = lo_server_new_multicast(group, port, 0);
+            }
+
+            if (!x->om_server) {
+                lo_address_free(x->om_address);
+                return NULL;
+            }
             lo_server_add_method(x->om_server, NULL, NULL, oscmulticast_handler, x);
         }
         
@@ -331,4 +368,61 @@ void maxpd_atom_set_float(t_atom *a, float d)
 #else
     SETFLOAT(a, d);
 #endif
+}
+
+/*! Local function to get the IP address of a network interface. */
+static int get_interface_addr(const char* pref,
+                              struct in_addr* addr, char **iface)
+{
+    struct in_addr zero;
+    struct sockaddr_in *sa;
+    
+    *(unsigned int *)&zero = inet_addr("0.0.0.0");
+        
+    struct ifaddrs *ifaphead;
+    struct ifaddrs *ifap;
+    struct ifaddrs *iflo=0, *ifchosen=0;
+    
+    if (getifaddrs(&ifaphead) != 0)
+        return 1;
+    
+    ifap = ifaphead;
+    while (ifap) {
+        sa = (struct sockaddr_in *) ifap->ifa_addr;
+        if (!sa) {
+            ifap = ifap->ifa_next;
+            continue;
+        }
+        
+        // Note, we could also check for IFF_MULTICAST-- however this
+        // is the data-sending port, not the admin bus port.
+        
+        if (sa->sin_family == AF_INET && ifap->ifa_flags & IFF_UP
+            && memcmp(&sa->sin_addr, &zero, sizeof(struct in_addr))!=0)
+        {
+            ifchosen = ifap;
+            if (pref && strcmp(ifap->ifa_name, pref)==0)
+                break;
+            else if (ifap->ifa_flags & IFF_LOOPBACK)
+                iflo = ifap;
+        }
+        ifap = ifap->ifa_next;
+    }
+    
+    // Default to loopback address in case user is working locally.
+    if (!ifchosen)
+        ifchosen = iflo;
+    
+    if (ifchosen) {
+        if (*iface) free(*iface);
+        *iface = strdup(ifchosen->ifa_name);
+        sa = (struct sockaddr_in *) ifchosen->ifa_addr;
+        *addr = sa->sin_addr;
+        freeifaddrs(ifaphead);
+        return 0;
+    }
+    
+    freeifaddrs(ifaphead);
+    
+    return 2;
 }
