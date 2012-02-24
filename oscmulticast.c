@@ -89,7 +89,7 @@ static void *oscmulticast_class;
 		t_class *c;
 		c = class_new(gensym("oscmulticast"), (t_newmethod)oscmulticast_new, (t_method)oscmulticast_free, 
 					  (long)sizeof(t_oscmulticast), 0L, A_GIMME, 0);
-        class_addmethod(c, (t_method_)oscmulticast_interface, gensym("interface"), A_GIMME, 0);
+        class_addmethod(c, (t_method)oscmulticast_interface, gensym("interface"), A_GIMME, 0);
 		class_addanything(c, (t_method)oscmulticast_anything);
 		oscmulticast_class = c;
 		return 0;
