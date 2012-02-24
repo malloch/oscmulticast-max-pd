@@ -171,7 +171,7 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
         }
 
         if (!x->om_server) {
-            post("oscmulticast: could not create lo_server")
+            post("oscmulticast: could not create lo_server");
             lo_address_free(x->om_address);
             return NULL;
         }
@@ -306,19 +306,16 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
 				j++;
                 break;
             case 's':
-                maxpd_atom_set_string(x->buffer+j,
-                                      (const char *)gensym(&argv[i]->s));
+                maxpd_atom_set_string(x->buffer+j, (const char *)&argv[i]->s);
 				j++;
                 break;
             case 'S':
-                maxpd_atom_set_string(x->buffer+j,
-                                      (const char *)gensym(&argv[i]->s));
+                maxpd_atom_set_string(x->buffer+j, (const char *)&argv[i]->s);
 				j++;
                 break;
             case 'c':
                 snprintf(my_string, 2, "%c", argv[i]->c);
-                maxpd_atom_set_string(x->buffer+j,
-                                      (const char *)gensym(my_string));
+                maxpd_atom_set_string(x->buffer+j, (const char *)my_string);
 				j++;
                 break;
             case 't':
