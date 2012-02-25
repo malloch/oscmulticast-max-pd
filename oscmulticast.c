@@ -30,7 +30,7 @@
 
 // *********************************************************
 // -(object struct)-----------------------------------------
-typedef struct _oscmulticast 
+typedef struct _oscmulticast
 {
 	t_object ob;
     void *outlet1;
@@ -72,7 +72,7 @@ static void *oscmulticast_class;
 	int main(void)
 	{	
 		t_class *c;
-		c = class_new("oscmulticast", (method)oscmulticast_new, (method)oscmulticast_free, 
+		c = class_new("oscmulticast", (method)oscmulticast_new, (method)oscmulticast_free,
 					  (long)sizeof(t_oscmulticast), 0L, A_GIMME, 0);
 		class_addmethod(c, (method)oscmulticast_assist,    "assist",    A_CANT,  0);
         class_addmethod(c, (method)oscmulticast_interface, "interface", A_GIMME, 0);
@@ -85,7 +85,7 @@ static void *oscmulticast_class;
 	int oscmulticast_setup(void)
 	{
 		t_class *c;
-		c = class_new(gensym("oscmulticast"), (t_newmethod)oscmulticast_new, (t_method)oscmulticast_free, 
+		c = class_new(gensym("oscmulticast"), (t_newmethod)oscmulticast_new, (t_method)oscmulticast_free,
 					  (long)sizeof(t_oscmulticast), 0L, A_GIMME, 0);
         class_addmethod(c, (t_method)oscmulticast_interface, gensym("interface"), A_GIMME, 0);
 		class_addanything(c, (t_method)oscmulticast_anything);
@@ -184,7 +184,6 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
         else
             post("oscmulticast: using default interface");
         lo_server_add_method(x->server, NULL, NULL, oscmulticast_handler, x);
-            
 
 #ifdef MAXMSP
         x->clock = clock_new(x, (method)oscmulticast_poll);	// Create the timing clock
@@ -225,7 +224,7 @@ void oscmulticast_assist(t_oscmulticast *x, void *b, long m, long a, char *s)
 {
 	if (m == ASSIST_INLET) { // inlet
 		sprintf(s, "OSC to be sent to multicast bus");
-	} 
+	}
 	else {	// outlet
         sprintf(s, "OSC from multicast bus");
 	}
@@ -273,7 +272,7 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
         post("lo_message_new() error");
         return;
     }
-    
+
     int i;
     for (i=0; i<argc; i++)
     {
@@ -293,7 +292,7 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
         }
     }
     //set timetag?
-    
+
     lo_send_message(x->address, s->s_name, m);
     lo_message_free(m);
 }
@@ -303,7 +302,7 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
 void oscmulticast_poll(t_oscmulticast *x)
 {
     int count = 0;
-    
+
     while (count < 10 && lo_server_recv_noblock(x->server, 0)) {
         count++;
     }
@@ -318,19 +317,19 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
     t_oscmulticast *x = (t_oscmulticast *)user_data;
     int i, j;
     char my_string[2];
-    
+
     j=0;
-    
+
     if (!x->buffer) {
         post("Error receiving message!");
         return 0;
     }
-    
+
     if (argc > MAXSIZE) {
         post("Truncating received message to 256 elements!");
         argc = MAXSIZE;
     }
-    
+
     for (i=0; i<argc; i++)
     {
         switch (types[i])
@@ -375,7 +374,7 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
 
 // *********************************************************
 // some helper functions for abtracting differences
-// between maxmsp and puredata 
+// between maxmsp and puredata
 
 const char *maxpd_atom_get_string(t_atom *a)
 {
