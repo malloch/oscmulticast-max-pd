@@ -21,9 +21,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "lo/lo.h"
-#include <arpa/inet.h>
-#include <ifaddrs.h>
-#include <net/if.h>
 
 #define INTERVAL 1
 #define MAXSIZE 256
@@ -247,7 +244,7 @@ static void oscmulticast_interface(t_oscmulticast *x, t_symbol *s, int argc, t_a
 
     if (lo_address_set_iface(x->address, interface, 0)) {
         post("oscmulticast: could not create lo_address.");
-        return NULL;
+        return;
     }
 
     if (x->server)
