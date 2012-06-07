@@ -28,13 +28,65 @@
 				"box" : 				{
 					"fontname" : "Arial",
 					"fontsize" : 12.0,
+					"id" : "obj-9",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 330.0, 225.0, 127.0, 20.0 ],
+					"text" : "print oscmulticast:port"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 12.0,
+					"id" : "obj-15",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 330.0, 255.0, 147.0, 18.0 ],
+					"presentation_rect" : [ 348.0, 255.0, 0.0, 0.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 12.0,
+					"id" : "obj-13",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 180.0, 225.0, 129.0, 20.0 ],
+					"text" : "print oscmulticast:host"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 12.0,
+					"id" : "obj-14",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 180.0, 255.0, 147.0, 18.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 12.0,
 					"id" : "obj-12",
 					"maxclass" : "message",
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 135.0, 345.0, 76.0, 18.0 ],
-					"presentation_rect" : [ 136.0, 344.0, 0.0, 0.0 ],
+					"patching_rect" : [ 120.0, 345.0, 76.0, 18.0 ],
 					"text" : "interface lo0"
 				}
 
@@ -48,7 +100,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 45.0, 345.0, 80.0, 18.0 ],
+					"patching_rect" : [ 30.0, 345.0, 80.0, 18.0 ],
 					"text" : "interface en0"
 				}
 
@@ -62,8 +114,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 45.0, 300.0, 235.0, 34.0 ],
-					"presentation_rect" : [ 49.0, 298.0, 0.0, 0.0 ],
+					"patching_rect" : [ 30.0, 300.0, 235.0, 34.0 ],
 					"text" : "The network interface can be set with an argument or a message."
 				}
 
@@ -76,9 +127,9 @@
 					"linecount" : 2,
 					"maxclass" : "newobj",
 					"numinlets" : 1,
-					"numoutlets" : 1,
-					"outlettype" : [ "" ],
-					"patching_rect" : [ 45.0, 375.0, 189.0, 34.0 ],
+					"numoutlets" : 3,
+					"outlettype" : [ "list", "list", "list" ],
+					"patching_rect" : [ 30.0, 375.0, 189.0, 34.0 ],
 					"text" : "oscmulticast @group 224.0.1.3 @port 7570 @interface lo0"
 				}
 
@@ -91,8 +142,8 @@
 					"maxclass" : "newobj",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 195.0, 225.0, 103.0, 20.0 ],
-					"text" : "print oscmulticast"
+					"patching_rect" : [ 30.0, 225.0, 129.0, 20.0 ],
+					"text" : "print oscmulticast:msg"
 				}
 
 			}
@@ -105,7 +156,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 315.0, 135.0, 150.0, 48.0 ],
+					"patching_rect" : [ 300.0, 105.0, 150.0, 48.0 ],
 					"text" : "This objects requires the group and port attributes to be set."
 				}
 
@@ -119,7 +170,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 2,
 					"outlettype" : [ "float", "bang" ],
-					"patching_rect" : [ 45.0, 120.0, 50.0, 20.0 ]
+					"patching_rect" : [ 30.0, 120.0, 50.0, 20.0 ]
 				}
 
 			}
@@ -132,7 +183,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 45.0, 225.0, 147.0, 18.0 ]
+					"patching_rect" : [ 30.0, 255.0, 147.0, 18.0 ]
 				}
 
 			}
@@ -145,7 +196,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 45.0, 150.0, 123.0, 18.0 ],
+					"patching_rect" : [ 30.0, 150.0, 123.0, 18.0 ],
 					"text" : "/send_some_data $1"
 				}
 
@@ -157,9 +208,9 @@
 					"id" : "obj-1",
 					"maxclass" : "newobj",
 					"numinlets" : 1,
-					"numoutlets" : 1,
-					"outlettype" : [ "" ],
-					"patching_rect" : [ 45.0, 180.0, 242.0, 20.0 ],
+					"numoutlets" : 3,
+					"outlettype" : [ "list", "list", "list" ],
+					"patching_rect" : [ 30.0, 180.0, 319.0, 20.0 ],
 					"text" : "oscmulticast @group 224.0.1.3 @port 7570"
 				}
 
@@ -237,9 +288,36 @@
  ],
 		"lines" : [ 			{
 				"patchline" : 				{
+					"destination" : [ "obj-13", 0 ],
+					"hidden" : 0,
+					"midpoints" : [  ],
+					"source" : [ "obj-1", 1 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-14", 1 ],
+					"hidden" : 0,
+					"midpoints" : [ 189.5, 212.0, 317.5, 212.0 ],
+					"source" : [ "obj-1", 1 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-15", 1 ],
+					"hidden" : 0,
+					"midpoints" : [ 339.5, 212.0, 467.5, 212.0 ],
+					"source" : [ "obj-1", 2 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-3", 0 ],
 					"hidden" : 0,
-					"midpoints" : [ 54.5, 212.0, 204.5, 212.0 ],
+					"midpoints" : [  ],
 					"source" : [ "obj-1", 0 ]
 				}
 
@@ -248,8 +326,17 @@
 				"patchline" : 				{
 					"destination" : [ "obj-6", 1 ],
 					"hidden" : 0,
-					"midpoints" : [ 54.5, 212.0, 182.5, 212.0 ],
+					"midpoints" : [ 39.5, 212.0, 167.5, 212.0 ],
 					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-9", 0 ],
+					"hidden" : 0,
+					"midpoints" : [  ],
+					"source" : [ "obj-1", 2 ]
 				}
 
 			}

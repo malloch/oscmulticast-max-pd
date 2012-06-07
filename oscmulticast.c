@@ -31,6 +31,8 @@ typedef struct _oscmulticast
 {
 	t_object ob;
     void *outlet1;
+    void *outlet2;
+    void *outlet3;
     char *iface;
     char *group;
     char port[10];
@@ -101,10 +103,14 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 
 #ifdef MAXMSP
     if (x = object_alloc(oscmulticast_class)) {
-        x->outlet1 = outlet_new((t_object *)x, 0);
+        x->outlet3 = listout((t_object *)x);
+        x->outlet2 = listout((t_object *)x);
+        x->outlet1 = listout((t_object *)x);
 #else
     if (x = (t_oscmulticast *) pd_new(oscmulticast_class)) {
         x->outlet1 = outlet_new(&x->ob, gensym("list"));
+        x->outlet2 = outlet_new(&x->ob, gensym("list"));
+        x->outlet3 = outlet_new(&x->ob, gensym("list"));
 #endif
 
         x->group = NULL;
@@ -309,7 +315,7 @@ void oscmulticast_poll(t_oscmulticast *x)
 // *********************************************************
 // -(OSC handler)-------------------------------------------
 int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
-                    int argc, void *data, void *user_data)
+                    int argc, lo_message msg, void *user_data)
 {
     t_oscmulticast *x = (t_oscmulticast *)user_data;
     int i, j;
@@ -320,6 +326,14 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
     if (!x->buffer) {
         post("Error receiving message!");
         return 0;
+    }
+
+    lo_address address = lo_message_get_source(msg);
+    if (address) {
+        maxpd_atom_set_int(x->buffer, atoi(lo_address_get_port(address)));
+        outlet_anything(x->outlet3, gensym("int"), 1, x->buffer);
+        maxpd_atom_set_string(x->buffer, lo_address_get_hostname(address));
+        outlet_anything(x->outlet2, gensym("symbol"), 1, x->buffer);
     }
 
     if (argc > MAXSIZE) {
