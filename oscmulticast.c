@@ -238,7 +238,7 @@ void oscmulticast_assist(t_oscmulticast *x, void *b, long m, long a, char *s)
 // -(interface)---------------------------------------------
 static void oscmulticast_interface(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv)
 {
-    const char *interface = 0;
+    const char *iface = 0;
 
     if (argc < 1)
         return;
@@ -246,16 +246,16 @@ static void oscmulticast_interface(t_oscmulticast *x, t_symbol *s, int argc, t_a
     if (argv->a_type != A_SYM)
         return;
 
-    interface = maxpd_atom_get_string(argv);
+    iface = maxpd_atom_get_string(argv);
 
-    if (lo_address_set_iface(x->address, interface, 0)) {
+    if (lo_address_set_iface(x->address, iface, 0)) {
         post("oscmulticast: could not create lo_address.");
         return;
     }
 
     if (x->server)
         lo_server_free(x->server);
-    x->server = lo_server_new_multicast_iface(x->group, x->port, interface, 0, 0);
+    x->server = lo_server_new_multicast_iface(x->group, x->port, iface, 0, 0);
 
     if (!x->server) {
         post("oscmulticast: could not create lo_server");
