@@ -102,7 +102,7 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
     char address[64];
 
 #ifdef MAXMSP
-    if (x = object_alloc(oscmulticast_class)) {
+    if ((x = object_alloc(oscmulticast_class))) {
         x->outlet3 = listout((t_object *)x);
         x->outlet2 = listout((t_object *)x);
         x->outlet1 = listout((t_object *)x);
@@ -182,6 +182,10 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
             lo_address_free(x->address);
             return NULL;
         }
+
+        // Disable liblo message queueing
+        lo_server_enable_queue(x->server, 0, 1);
+
         if (x->iface)
             post("oscmulticast: using interface %s", lo_address_get_iface(x->address));
         else
