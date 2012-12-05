@@ -42,6 +42,9 @@ typedef struct _oscmulticast
 	t_atom buffer[MAXSIZE];
 } t_oscmulticast;
 
+static char *char_buffer;
+static int char_buffer_len = 0;
+
 // *********************************************************
 // -(function prototypes)-----------------------------------
 static void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv);
@@ -403,7 +406,39 @@ const char *maxpd_atom_get_string(t_atom *a)
 void maxpd_atom_set_string(t_atom *a, const char *string)
 {
 #ifdef MAXMSP
-    atom_setsym(a, gensym((char *)string));
+    if (strchr(string, ',')) {
+        int count = 0, count2 = 0;
+        while (1) {
+            if (string[count] == 0)
+                break;
+            if (string[count] == ',')
+                count2++;
+            count++;
+        }
+        if (strlen(string) > char_buffer_len) {
+            char_buffer_len = strlen(string) * 2;
+            char_buffer = realloc(char_buffer, char_buffer_len);
+        }
+        count = count2 = 0;
+        while (1) {
+            if (string[count] == 0) {
+                char_buffer[count2] = 0;
+                break;
+            }
+            if (string[count] == ',') {
+                char_buffer[count2++] = '\\';
+                char_buffer[count2] = ',';
+            }
+            else {
+                char_buffer[count2] = string[count];
+            }
+            count++;
+            count2++;
+        }
+        atom_setsym(a, gensym((char *)char_buffer));
+    }
+    else
+        atom_setsym(a, gensym((char *)string));
 #else
     SETSYMBOL(a, gensym(string));
 #endif
