@@ -38,6 +38,7 @@ typedef struct _oscmulticast
     char port[10];
     lo_server server;
     lo_address address;
+    lo_address reply_server;
     void *clock;          // pointer to clock object
 	t_atom buffer[MAXSIZE];
 } t_oscmulticast;
@@ -101,7 +102,7 @@ static void *oscmulticast_class;
 void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 {
 	t_oscmulticast *x = NULL;
-    int i, got_port = 0;
+    int i, enable_response_server = 0;
     char address[64];
 
 #ifdef MAXMSP
@@ -118,13 +119,18 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 
         x->group = NULL;
         x->iface = NULL;
+        x->port[0] = 0;
+        x->reply_server = NULL;
+
+        post("oscmulticast: v20131118 by Joseph Malloch / "
+             "Input Devices and Music Interaction Laboratory");
 
         if (argc < 4) {
             post("oscmulticast: not enough arguments!\n");
             return NULL;
         }
         for (i = 0; i < argc; i++) {
-            if(strcmp(maxpd_atom_get_string(argv+i), "@group") == 0) {
+            if (strcmp(maxpd_atom_get_string(argv+i), "@group") == 0) {
                 if ((argv+i+1)->a_type == A_SYM) {
                     x->group = strdup(maxpd_atom_get_string(argv+i+1));
                     i++;
@@ -133,26 +139,38 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
             else if (strcmp(maxpd_atom_get_string(argv+i), "@port") == 0) {
                 if ((argv+i+1)->a_type == A_FLOAT) {
                     snprintf(x->port, 10, "%i", (int)maxpd_atom_get_float(argv+i+1));
-                    got_port = 1;
                     i++;
                 }
 #ifdef MAXMSP
                 else if ((argv+i+1)->a_type == A_LONG) {
                     snprintf(x->port, 10, "%i", (int)atom_getlong(argv+i+1));
-                    got_port = 1;
                     i++;
                 }
 #endif
             }
-            else if(strcmp(maxpd_atom_get_string(argv+i), "@interface") == 0) {
+            else if (strcmp(maxpd_atom_get_string(argv+i), "@interface") == 0) {
                 if ((argv+i+1)->a_type == A_SYM) {
                     x->iface = strdup(maxpd_atom_get_string(argv+i+1));
                     i++;
                 }
             }
+            else if (strcmp(maxpd_atom_get_string(argv+i), "@local") == 0) {
+                if ((argv+i+1)->a_type == A_FLOAT) {
+                    if (maxpd_atom_get_float(argv+i+1) != 0.f)
+                        enable_response_server = 1;
+                    i++;
+                }
+#ifdef MAXMSP
+                else if ((argv+i+1)->a_type == A_LONG) {
+                    if (atom_getlong(argv+i+1) != 0)
+                        enable_response_server = 1;
+                    i++;
+                }
+#endif
+            }
         }
 
-        if (!x->group || !got_port) {
+        if (!x->group || !x->port[0]) {
             post("oscmulticast: need to specify group and port!");
             return NULL;
         }
@@ -195,6 +213,16 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
             post("oscmulticast: using default interface");
         lo_server_add_method(x->server, NULL, NULL, oscmulticast_handler, x);
 
+        // If "local" argument defined, create corresponding lo_server
+        if (enable_response_server) {
+            while (!(x->reply_server = lo_server_new(0, 0))) {}
+            post("created local reply server at %s", lo_server_get_url(x->reply_server));
+            // Disable liblo message queueing
+            lo_server_enable_queue(x->reply_server, 0, 1);
+            lo_server_add_method(x->reply_server, NULL, NULL,
+                                 oscmulticast_handler, x);
+        }
+
 #ifdef MAXMSP
         x->clock = clock_new(x, (method)oscmulticast_poll);	// Create the timing clock
 #else
@@ -216,6 +244,8 @@ void oscmulticast_free(t_oscmulticast *x)
     if (x->server) {
         lo_server_free(x->server);
     }
+    if (x->reply_server)
+        lo_server_free(x->reply_server);
     if (x->address) {
         lo_address_free(x->address);
     }
@@ -303,7 +333,7 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
     }
     //set timetag?
 
-    lo_send_message(x->address, s->s_name, m);
+    lo_send_message_from(x->address, x->reply_server, s->s_name, m);
     lo_message_free(m);
 }
 
@@ -313,8 +343,16 @@ void oscmulticast_poll(t_oscmulticast *x)
 {
     int count = 0;
 
-    while (count < 10 && lo_server_recv_noblock(x->server, 0)) {
-        count++;
+    if (x->reply_server) {
+        while (count < 10 && (lo_server_recv_noblock(x->server, 0)
+                              + lo_server_recv_noblock(x->reply_server, 0))) {
+           count++;
+        }
+    }
+    else {
+        while (count < 10 && lo_server_recv_noblock(x->server, 0)) {
+            count++;
+        }
     }
 	clock_delay(x->clock, INTERVAL);  // Set clock to go off after delay
 }
