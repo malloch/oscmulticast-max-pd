@@ -115,10 +115,14 @@ void startup(t_oscmulticast *x)
     if (!x->group || !x->port[0])
         return;
 
-    if (x->address)
+    if (x->address) {
         lo_address_free(x->address);
-    if (x->server)
+        x->address = NULL;
+    }
+    if (x->server) {
         lo_server_free(x->server);
+        x->server = NULL;
+    }
 
     /* Open address */
     snprintf(address, 64, "osc.udp://%s:%s", x->group, x->port);
@@ -149,6 +153,7 @@ void startup(t_oscmulticast *x)
     if (!x->server) {
         post("oscmulticast: could not create lo_server");
         lo_address_free(x->address);
+        x->address = NULL;
         return;
     }
 
@@ -186,6 +191,8 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
         x->outlet3 = outlet_new(&x->ob, gensym("list"));
 #endif
 
+        x->address = NULL;
+        x->server = NULL;
         x->clock = NULL;
         x->group = NULL;
         x->port[0] = '\0';
