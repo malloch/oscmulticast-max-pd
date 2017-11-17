@@ -169,18 +169,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				C74SUPPORT = "/Applications/MaxSDK-7.1.0/source/c74support";
+				C74_SYM_LINKER_FLAGS = "@$(C74SUPPORT)/max-includes/c74_linker_flags.txt";
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"/Applications/MaxSDK-7.0.3/source/c74support/max-includes",
+					"$(C74SUPPORT)/max-includes",
 				);
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G4;
 				GCC_OPTIMIZATION_LEVEL = 3;
-				GCC_PREFIX_HEADER = "/Applications/MaxSDK-5.1.7/c74support/max-includes/macho-prefix.pch";
+				GCC_PREFIX_HEADER = "$(C74SUPPORT)/max-includes/macho-prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = "MAXMSP=1";
 				GCC_VERSION = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = NO;
@@ -189,21 +192,23 @@
 					/Developer/Headers/FlatCarbon,
 					"\"/Library/Application Support/c74support/max-includes\"",
 					"\"$(SRCROOT)/../liblo\"",
-					"/Applications/MaxSDK-7.0.3/source/c74support/max-includes",
+					"$(C74SUPPORT)/max-includes",
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
-					"-framework",
-					MaxAPI,
+					"$(C74_SYM_LINKER_FLAGS)",
 					/usr/local/lib/liblo.dylib,
 					"-lmx",
 				);
 				PREBINDING = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = org.idmil.osc.multicast;
 				PRODUCT_NAME = oscmulticast;
 				SDKROOT = macosx;
 				SKIP_INSTALL = NO;
+				VALID_ARCHS = "i386 x86_64";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
