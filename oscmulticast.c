@@ -18,9 +18,13 @@
 	#include "m_pd.h"
     #define A_SYM A_SYMBOL
 #endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 #include "lo/lo.h"
 
 #define INTERVAL 1
@@ -33,11 +37,11 @@ typedef struct _oscmulticast
 	t_object ob;
     void *outlet1;
     void *outlet2;
-    void *outlet3;
+    char *iface_pref;
     char *iface;
     char *group;
     char port[10];
-    lo_server server;
+    lo_server servers[2];
     lo_address address;
     void *clock;          // pointer to clock object
 	t_atom buffer[MAXSIZE];
@@ -92,9 +96,11 @@ int main(void)
 int oscmulticast_setup(void)
 {
     t_class *c;
-    c = class_new(gensym("oscmulticast"), (t_newmethod)oscmulticast_new, (t_method)oscmulticast_free,
-                  (long)sizeof(t_oscmulticast), 0L, A_GIMME, 0);
-    class_addmethod(c, (t_method)oscmulticast_interface, gensym("interface"), A_GIMME, 0);
+    c = class_new(gensym("oscmulticast"), (t_newmethod)oscmulticast_new,
+                  (t_method)oscmulticast_free, (long)sizeof(t_oscmulticast),
+                  0L, A_GIMME, 0);
+    class_addmethod(c, (t_method)oscmulticast_interface, gensym("interface"),
+                    A_GIMME, 0);
     class_addanything(c, (t_method)oscmulticast_anything);
     oscmulticast_class = c;
     return 0;
@@ -105,13 +111,65 @@ int oscmulticast_setup(void)
 /* Internal LibLo error handler */
 static void handler_error(int num, const char *msg, const char *where)
 {
-    post("[liblo] server error %d in path %s: %s\n", num, where, msg);
+    post("oscmulticast: liblo server error %d in path %s: %s\n", num, where, msg);
+}
+
+/*! Local function to get the IP address of a network interface. */
+static int get_interface_addr(const char* pref, struct in_addr* addr,
+                              char **iface)
+{
+    struct in_addr zero;
+    struct sockaddr_in *sa;
+
+    *(unsigned int *)&zero = inet_addr("0.0.0.0");
+
+    struct ifaddrs *ifaphead;
+    struct ifaddrs *ifap;
+    struct ifaddrs *iflo=0, *ifchosen=0;
+
+    if (getifaddrs(&ifaphead) != 0)
+        return 1;
+
+    ifap = ifaphead;
+    while (ifap) {
+        sa = (struct sockaddr_in *) ifap->ifa_addr;
+        if (!sa) {
+            ifap = ifap->ifa_next;
+            continue;
+        }
+
+        if (sa->sin_family == AF_INET && ifap->ifa_flags & IFF_UP
+            && memcmp(&sa->sin_addr, &zero, sizeof(struct in_addr))!=0) {
+            ifchosen = ifap;
+            if (pref && strcmp(ifap->ifa_name, pref)==0)
+                break;
+            else if (ifap->ifa_flags & IFF_LOOPBACK)
+                iflo = ifap;
+        }
+        ifap = ifap->ifa_next;
+    }
+
+        // Default to loopback address in case user is working locally.
+    if (!ifchosen)
+        ifchosen = iflo;
+
+    if (ifchosen) {
+        if (*iface)
+            free(*iface);
+        *iface = strdup(ifchosen->ifa_name);
+        sa = (struct sockaddr_in *) ifchosen->ifa_addr;
+        *addr = sa->sin_addr;
+        freeifaddrs(ifaphead);
+        return 0;
+    }
+
+    freeifaddrs(ifaphead);
+
+    return 2;
 }
 
 void startup(t_oscmulticast *x)
 {
-    char address[64];
-
     if (!x->group || !x->port[0])
         return;
 
@@ -119,16 +177,25 @@ void startup(t_oscmulticast *x)
         lo_address_free(x->address);
         x->address = NULL;
     }
-    if (x->server) {
-        lo_server_free(x->server);
-        x->server = NULL;
+    if (x->servers[0]) {
+        lo_server_free(x->servers[0]);
+        x->servers[0] = NULL;
+    }
+
+    /* Initialize interface information. */
+    struct in_addr iface_ip;
+    if (get_interface_addr(x->iface_pref, &iface_ip, &x->iface)) {
+        post("oscmulticast: no interface found!\n");
+        return;
+    }
+    else {
+        post("oscmulticast: using interface '%s'.\n", x->iface);
     }
 
     /* Open address */
-    snprintf(address, 64, "osc.udp://%s:%s", x->group, x->port);
-    x->address = lo_address_new_from_url(address);
+    x->address = lo_address_new(x->group, x->port);
     if (!x->address) {
-        post("oscmulticast: could not create lo_address.");
+        post("oscmulticast: could not create multicast address.");
         return;
     }
 
@@ -136,31 +203,28 @@ void startup(t_oscmulticast *x)
     lo_address_set_ttl(x->address, 1);
 
     /* Specify the interface to use for multicasting */
-    if (x->iface) {
-        if (lo_address_set_iface(x->address, x->iface, 0)) {
-            post("oscmulticast: could not create lo_address.");
-            return;
-        }
-        post("oscmulticast: using interface %s", lo_address_get_iface(x->address));
-        x->server = lo_server_new_multicast_iface(x->group, x->port,
-                                                  x->iface, 0, handler_error);
-    }
-    else {
-        post("oscmulticast: using default interface");
-        x->server = lo_server_new_multicast(x->group, x->port, handler_error);
-    }
+    lo_address_set_iface(x->address, x->iface, 0);
 
-    if (!x->server) {
-        post("oscmulticast: could not create lo_server");
+    x->servers[0] = lo_server_new_multicast_iface(x->group, x->port, x->iface, 0,
+                                                 handler_error);
+
+    if (!x->servers[0]) {
+        post("oscmulticast: could not create multicast server");
         lo_address_free(x->address);
         x->address = NULL;
         return;
     }
 
-    // Disable liblo message queueing
-    lo_server_enable_queue(x->server, 0, 1);
+    // Create a server for receiving replies if necessary
+    if (!x->servers[1])
+        while (!(x->servers[1] = lo_server_new(0, handler_error))) {}
 
-    lo_server_add_method(x->server, NULL, NULL, oscmulticast_handler, x);
+    // Disable liblo message queueing
+    lo_server_enable_queue(x->servers[0], 0, 1);
+    lo_server_enable_queue(x->servers[1], 0, 1);
+
+    lo_server_add_method(x->servers[0], NULL, NULL, oscmulticast_handler, x);
+    lo_server_add_method(x->servers[1], NULL, NULL, oscmulticast_handler, x);
 
     if (!x->clock) {
 #ifdef MAXMSP
@@ -181,21 +245,21 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 
 #ifdef MAXMSP
     if ((x = object_alloc(oscmulticast_class))) {
-        x->outlet3 = listout((t_object *)x);
         x->outlet2 = listout((t_object *)x);
         x->outlet1 = listout((t_object *)x);
 #else
     if (x = (t_oscmulticast *) pd_new(oscmulticast_class)) {
         x->outlet1 = outlet_new(&x->ob, gensym("list"));
         x->outlet2 = outlet_new(&x->ob, gensym("list"));
-        x->outlet3 = outlet_new(&x->ob, gensym("list"));
 #endif
 
         x->address = NULL;
-        x->server = NULL;
+        x->servers[0] = NULL;
+        x->servers[1] = NULL;
         x->clock = NULL;
         x->group = NULL;
         x->port[0] = '\0';
+        x->iface_pref = NULL;
         x->iface = NULL;
 
         for (i = 0; i < argc; i++) {
@@ -219,7 +283,7 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
             }
             else if(strcmp(maxpd_atom_get_string(argv+i), "@interface") == 0) {
                 if ((argv+i+1)->a_type == A_SYM) {
-                    x->iface = strdup(maxpd_atom_get_string(argv+i+1));
+                    x->iface_pref = strdup(maxpd_atom_get_string(argv+i+1));
                     i++;
                 }
             }
@@ -237,11 +301,17 @@ void oscmulticast_free(t_oscmulticast *x)
         clock_unset(x->clock);	// Remove clock routine from the scheduler
         clock_free(x->clock);		// Frees memory used by clock
     }
-    if (x->server) {
-        lo_server_free(x->server);
+    if (x->servers[0]) {
+        lo_server_free(x->servers[0]);
+    }
+    if (x->servers[1]) {
+        lo_server_free(x->servers[1]);
     }
     if (x->address) {
         lo_address_free(x->address);
+    }
+    if (x->iface_pref) {
+        free(x->iface_pref);
     }
     if (x->iface) {
         free(x->iface);
@@ -257,10 +327,23 @@ void oscmulticast_free(t_oscmulticast *x)
 void oscmulticast_assist(t_oscmulticast *x, void *b, long m, long a, char *s)
 {
 	if (m == ASSIST_INLET) { // inlet
-		sprintf(s, "OSC to be sent to multicast bus");
+		sprintf(s, "Message to be sent to multicast group.");
 	}
 	else {	// outlet
-        sprintf(s, "OSC from multicast bus");
+        switch (a) {
+            case 0:
+                sprintf(s, "Messages from multicast group.");
+                break;
+            case 1:
+                sprintf(s, "URL of message origin.");
+                break;
+//            case 2:
+//                sprintf(s, "Message timestamp.");
+//                break;
+            default:
+                sprintf(s, "Outlet %d.", (int)a);
+                break;
+        }
 	}
 }
 #endif
@@ -325,12 +408,12 @@ static void oscmulticast_interface(t_oscmulticast *x, t_symbol *s, int argc, t_a
         return;
 
     iface = maxpd_atom_get_string(argv);
-    if (x->iface) {
-        if (strcmp(x->iface, iface)==0)
+    if (x->iface_pref) {
+        if (strcmp(x->iface_pref, iface)==0)
             return;
-        free(x->iface);
+        free(x->iface_pref);
     }
-    x->iface = strdup(iface);
+    x->iface_pref = strdup(iface);
 
     startup(x);
 }
@@ -339,20 +422,22 @@ static void oscmulticast_interface(t_oscmulticast *x, t_symbol *s, int argc, t_a
 // -(anything)----------------------------------------------
 void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv)
 {
-    if (!x->address)
+    if (!x->address || !x->servers[1])
         return;
+
+    lo_timetag tt;
+    lo_timetag_now(&tt);
+    lo_bundle b = lo_bundle_new(tt);
 
     lo_message m = lo_message_new();
     if (!m) {
-        post("lo_message_new() error");
+        post("oscmulticast: error creating message!");
         return;
     }
 
     int i;
-    for (i=0; i<argc; i++)
-    {
-        switch ((argv + i)->a_type)
-        {
+    for (i = 0; i < argc; i++) {
+        switch ((argv + i)->a_type) {
 			case A_FLOAT:
                 lo_message_add_float(m, atom_getfloat(argv + i));
                 break;
@@ -366,9 +451,9 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
                 break;
         }
     }
-    //set timetag?
 
-    lo_send_message(x->address, s->s_name, m);
+    lo_bundle_add_message(b, s->s_name, m);
+    lo_send_bundle_from(x->address, x->servers[1], b);
     lo_message_free(m);
 }
 
@@ -376,20 +461,21 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
 // -(poll libmapper)----------------------------------------
 void oscmulticast_poll(t_oscmulticast *x)
 {
-    int count = 0;
+    int count = 0, status[2];
 
-    if (x->server) {
-        while (count < 10 && lo_server_recv_noblock(x->server, 0)) {
+    if (x->servers[0]) {
+        while (count < 10 && lo_servers_recv_noblock(x->servers, status, 2, 0)) {
             count++;
         }
     }
+
 	clock_delay(x->clock, INTERVAL);  // Set clock to go off after delay
 }
 
 // *********************************************************
 // -(OSC handler)-------------------------------------------
 int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
-                    int argc, lo_message msg, void *user_data)
+                         int argc, lo_message msg, void *user_data)
 {
     t_oscmulticast *x = (t_oscmulticast *)user_data;
     int i, j;
@@ -398,20 +484,19 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
     j=0;
 
     if (!x->buffer) {
-        post("Error receiving message!");
+        post("oscmulticast: error receiving message!");
         return 0;
     }
 
     lo_address address = lo_message_get_source(msg);
     if (address) {
-        maxpd_atom_set_int(x->buffer, atoi(lo_address_get_port(address)));
-        outlet_anything(x->outlet3, gensym("int"), 1, x->buffer);
-        maxpd_atom_set_string(x->buffer, lo_address_get_hostname(address));
+        maxpd_atom_set_string(x->buffer, lo_address_get_url(address));
         outlet_anything(x->outlet2, gensym("symbol"), 1, x->buffer);
     }
 
     if (argc > MAXSIZE) {
-        post("Truncating received message to 256 elements!");
+        post("oscmulticast: truncating received message to %i elements!",
+             MAXSIZE);
         argc = MAXSIZE;
     }
 
