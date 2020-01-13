@@ -35,8 +35,7 @@
 typedef struct _oscmulticast
 {
 	t_object ob;
-    void *outlet1;
-    void *outlet2;
+    void *outlets[3];
     char *iface_pref;
     char *iface;
     char *group;
@@ -59,8 +58,10 @@ static void oscmulticast_port(t_oscmulticast *x, t_symbol *s, int argc, t_atom *
 static void oscmulticast_interface(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv);
 static void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *argv);
 static void oscmulticast_poll(t_oscmulticast *x);
-static int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
-                                int argc, void *data, void *user_data);
+static int multicast_handler(const char *path, const char *types, lo_arg ** argv,
+                             int argc, void *data, void *user_data);
+static int reply_handler(const char *path, const char *types, lo_arg ** argv,
+                         int argc, void *data, void *user_data);
 #ifdef MAXMSP
 	static void oscmulticast_assist(t_oscmulticast *x, void *b, long m, long a, char *s);
 #endif
@@ -223,8 +224,8 @@ void startup(t_oscmulticast *x)
     lo_server_enable_queue(x->servers[0], 0, 1);
     lo_server_enable_queue(x->servers[1], 0, 1);
 
-    lo_server_add_method(x->servers[0], NULL, NULL, oscmulticast_handler, x);
-    lo_server_add_method(x->servers[1], NULL, NULL, oscmulticast_handler, x);
+    lo_server_add_method(x->servers[0], NULL, NULL, multicast_handler, x);
+    lo_server_add_method(x->servers[1], NULL, NULL, reply_handler, x);
 
     if (!x->clock) {
 #ifdef MAXMSP
@@ -245,12 +246,14 @@ void *oscmulticast_new(t_symbol *s, int argc, t_atom *argv)
 
 #ifdef MAXMSP
     if ((x = object_alloc(oscmulticast_class))) {
-        x->outlet2 = listout((t_object *)x);
-        x->outlet1 = listout((t_object *)x);
+        x->outlets[2] = listout((t_object *)x);
+        x->outlets[1] = listout((t_object *)x);
+        x->outlets[0] = listout((t_object *)x);
 #else
     if (x = (t_oscmulticast *) pd_new(oscmulticast_class)) {
-        x->outlet1 = outlet_new(&x->ob, gensym("list"));
-        x->outlet2 = outlet_new(&x->ob, gensym("list"));
+        x->outlets[0] = outlet_new(&x->ob, gensym("list"));
+        x->outlets[1] = outlet_new(&x->ob, gensym("list"));
+        x->outlets[2] = outlet_new(&x->ob, gensym("list"));
 #endif
 
         x->address = NULL;
@@ -335,11 +338,11 @@ void oscmulticast_assist(t_oscmulticast *x, void *b, long m, long a, char *s)
                 sprintf(s, "Messages from multicast group.");
                 break;
             case 1:
+                sprintf(s, "Messages sent directly to reply server.");
+                break;
+            case 2:
                 sprintf(s, "URL of message origin.");
                 break;
-//            case 2:
-//                sprintf(s, "Message timestamp.");
-//                break;
             default:
                 sprintf(s, "Outlet %d.", (int)a);
                 break;
@@ -473,9 +476,9 @@ void oscmulticast_poll(t_oscmulticast *x)
 }
 
 // *********************************************************
-// -(OSC handler)-------------------------------------------
-int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
-                         int argc, lo_message msg, void *user_data)
+// -(OSC handlers)-------------------------------------------
+int generic_handler(const char *path, const char *types, lo_arg ** argv,
+                    int argc, lo_message msg, void *user_data, int outlet)
 {
     t_oscmulticast *x = (t_oscmulticast *)user_data;
     int i, j;
@@ -491,7 +494,7 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
     lo_address address = lo_message_get_source(msg);
     if (address) {
         maxpd_atom_set_string(x->buffer, lo_address_get_url(address));
-        outlet_anything(x->outlet2, gensym("symbol"), 1, x->buffer);
+        outlet_anything(x->outlets[2], gensym("symbol"), 1, x->buffer);
     }
 
     if (argc > MAXSIZE) {
@@ -538,8 +541,21 @@ int oscmulticast_handler(const char *path, const char *types, lo_arg ** argv,
                 break;
         }
     }
-    outlet_anything(x->outlet1, gensym((char *)path), j, x->buffer);
+
+    outlet_anything(x->outlets[outlet], gensym((char *)path), j, x->buffer);
     return 0;
+}
+
+int multicast_handler(const char *path, const char *types, lo_arg ** argv,
+                      int argc, lo_message msg, void *user_data)
+{
+    return generic_handler(path, types, argv, argc, msg, user_data, 0);
+}
+
+int reply_handler(const char *path, const char *types, lo_arg ** argv,
+                  int argc, lo_message msg, void *user_data)
+{
+    return generic_handler(path, types, argv, argc, msg, user_data, 1);
 }
 
 // *********************************************************
