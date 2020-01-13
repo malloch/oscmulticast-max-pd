@@ -449,9 +449,16 @@ void oscmulticast_anything(t_oscmulticast *x, t_symbol *s, int argc, t_atom *arg
                 lo_message_add_int32(m, (int)atom_getlong(argv + i));
                 break;
 #endif
-            case A_SYM:
-                lo_message_add_string(m, maxpd_atom_get_string(argv + i));
+            case A_SYM: {
+                const char *s = maxpd_atom_get_string(argv + i);
+                if (s && 0 == strcmp(s, "True"))
+                    lo_message_add_true(m);
+                else if (s && 0 == strcmp(s, "False"))
+                    lo_message_add_false(m);
+                else
+                    lo_message_add_string(m, s);
                 break;
+            }
         }
     }
 
@@ -509,32 +516,40 @@ int generic_handler(const char *path, const char *types, lo_arg ** argv,
         {
             case 'i':
                 maxpd_atom_set_int(x->buffer+j, argv[i]->i);
-				j++;
+				++j;
                 break;
             case 'h':
                 maxpd_atom_set_int(x->buffer+j, argv[i]->h);
-				j++;
+				++j;
                 break;
             case 'f':
                 maxpd_atom_set_float(x->buffer+j, argv[i]->f);
-				j++;
+				++j;
                 break;
             case 'd':
                 maxpd_atom_set_float(x->buffer+j, (float)argv[i]->d);
-				j++;
+				++j;
                 break;
             case 's':
                 maxpd_atom_set_string(x->buffer+j, (const char *)&argv[i]->s);
-				j++;
+				++j;
                 break;
             case 'S':
                 maxpd_atom_set_string(x->buffer+j, (const char *)&argv[i]->s);
-				j++;
+				++j;
                 break;
             case 'c':
                 snprintf(my_string, 2, "%c", argv[i]->c);
                 maxpd_atom_set_string(x->buffer+j, (const char *)my_string);
-				j++;
+				++j;
+                break;
+            case 'T':
+                maxpd_atom_set_string(x->buffer+j, "True");
+                ++j;
+                break;
+            case 'F':
+                maxpd_atom_set_string(x->buffer+j, "False");
+                ++j;
                 break;
             case 't':
                 //output timetag from a second outlet?
